@@ -43,12 +43,10 @@ public with sharing class TestContractResource {
         RestResponse res = new RestResponse();
         RestContext.response = res;
 
-        // Call the method
         Test.startTest();
         ContractResource.createContract(testContract2.AccountId, testContract2.Status, testContract2.StartDate, testContract2.ContractTerm);
         Test.stopTest();
 
-        // Verify response
         System.assertEquals(201, res.statusCode);
         Map<String,Object> responseBodyMap = (Map<String,Object>)JSON.deserializeUntyped(res.responseBody.toString());
         System.assertEquals('Contract successfully created', responseBodyMap.get('Message'));
@@ -62,7 +60,7 @@ public with sharing class TestContractResource {
         Account testAccount3 = new Account(Name = 'testAccount3');
         insert testAccount3;
 
-        // Mocking the request
+        // Mocking the request with invalid data
         RestRequest req = new RestRequest();
         req.requestURI = REQUEST_URI;
         req.httpMethod = 'POST';
@@ -73,12 +71,10 @@ public with sharing class TestContractResource {
         RestResponse res = new RestResponse();
         RestContext.response = res;
 
-        // Call the method
         Test.startTest();
         ContractResource.createContract(testAccount3.Id, 'testFail', Date.today(), 12);
         Test.stopTest();
 
-        // Verify response
         System.assertEquals(400, res.statusCode);
     }
 
@@ -104,7 +100,6 @@ public with sharing class TestContractResource {
         // Mocking the response as null
         RestContext.response = null;
 
-        // Call the method
         Test.startTest();
         ContractResource.createContract(testContract4.AccountId, testContract4.Status, testContract4.StartDate, testContract4.ContractTerm);
         Test.stopTest();
@@ -173,7 +168,7 @@ public with sharing class TestContractResource {
         Account existingAccount = [SELECT Id, Name FROM Account WHERE Name = 'testAccount1'];
         Contract existingContract = [SELECT Id, ContractTerm FROM Contract WHERE AccountId =:existingAccount.Id];
 
-        // Mocking the request
+        // Mocking the request with invalid data
         RestRequest req = new RestRequest();
         req.requestURI = REQUEST_URI + existingContract.Id;
         req.httpMethod = 'PATCH';
@@ -207,7 +202,6 @@ public with sharing class TestContractResource {
         // Mocking the response as null
         RestContext.response = null;
 
-        // Call the method
         Test.startTest();
         ContractResource.updateContract();
         Test.stopTest();

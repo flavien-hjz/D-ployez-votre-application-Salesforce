@@ -2,7 +2,7 @@
 global with sharing class ContractResource {
 
     // Utility method to create a RestResponse object
-    private static RestResponse createResponse(){
+    private static RestResponse prepareResponse(){
         RestResponse response = RestContext.response;
         if (response == null){
             response = new RestResponse();
@@ -22,10 +22,9 @@ global with sharing class ContractResource {
     @HttpPost
     global static void createContract(String accountId, String status, Date startDate, Integer contractTerm){
 
-        RestResponse response = createResponse();
+        RestResponse response = prepareResponse();
 
         try{
-
             // Validate input parameters
             if (String.isBlank(accountId) || String.isBlank(status) || startDate == null || contractTerm == null){
                 throw new IllegalArgumentException('Missing required fields');
@@ -50,6 +49,7 @@ global with sharing class ContractResource {
             response.statusCode = 201;
 
         } catch (Exception e){
+            // Handle exceptions and return an appropriate message
             System.debug('ERROR ON CREATE: ' + e.getMessage());
 
             // Prepare response body for error on creation
@@ -67,13 +67,12 @@ global with sharing class ContractResource {
     @HttpPatch
     global static void updateContract(){
 
-        RestResponse response = createResponse();
+        RestResponse response = prepareResponse();
 
         try{
+            // Retrieve the Contract from the URI
             RestRequest request = RestContext.request;
             String contractId = request.requestURI.substring(request.requestURI.lastIndexOf('/') + 1);
-
-            // Retrieve Contract to be updated
             Contract contract =[SELECT Id FROM Contract WHERE Id =:contractId];
 
             // Deserialize request body and update Contract fields
@@ -94,6 +93,7 @@ global with sharing class ContractResource {
             response.statusCode = 200;
 
         } catch (Exception e){
+            // Handle exceptions and return an appropriate error message
             System.debug('ERROR ON UPDATE: ' + e.getMessage());
 
             // Prepare response body for error on update

@@ -1,163 +1,154 @@
 @RestResource(urlMapping='/v1/Contacts/*')
 global with sharing class ContactResource {
 
-    // Method to create a new contact
-    @HttpPost
-    global static void createContact(String lastName, String firstName, String email) {
-        RestResponse response = initializeResponse();
-
-        try{
-            // Validate input parameters
-            validateInput(lastName, firstName, email);
-
-            //Check if contact with given email already exists
-            Contact existingContact = [SELECT Id FROM Contact WHERE Email =:email LIMIT 1];
-
-            if (existingContact != null){
-                // If contact already exists, return error response
-                sendSuccessResponse(response, existingContact.Id, 'This contact already exists', 200);
-            } else {
-                //Create a new contact
-                Contact newContact = new Contact(
-                    LastName = lastName,
-                    FirstName = firstName,
-                    Email = email
-                );
-                insert newContact;
-                // Send success response
-                sendSuccessResponse(response, newContact.Id, 'Contact ' + newContact.Id + ' was successfully created', 201);
-            }
-        } catch(Exception e) {
-            // Handle any exception
-            handleException(response, 'An error occured: ' + e.getMessage());
-        }
-    }
-
-    // Method to update an existing contact
-    @HttpPatch
-    global static void updateContact(String lastName, String firstName, String email) {
-        RestResponse response = initializeResponse();
-
-        try {
-            RestRequest request = RestContext.request;
-            String contactId = request.requestURI.substring(request.requestURI.lastIndexOf('/') + 1);
-
-            // Retrieve the contact to be updated
-            Contact contact = [SELECT Id FROM Contact WHERE Id = :contactId LIMIT 1];
-            if (contact == null) {
-                // If contact not found, return error response
-                sendErrorResponse(response, 'Contact not found', 404);
-                return;
-            }
-
-            // Update contact fields if provided in request body
-            if (!String.isBlank(lastName)) {
-                contact.LastName = lastName;
-            }
-            if (!String.isBlank(firstName)) {
-                contact.FirstName = firstName;
-            }
-            if (!String.isBlank(email)) {
-                contact.Email = email;
-            }
-            //Update the contact
-            update contact;
-
-            // Send success response
-            sendSuccessResponse(response, contact.Id, 'Contact ' + contact.Id + ' was successfully updated');
-        } catch(Exception e) {
-            // Handle any exception
-            handleException(response, 'An error occurred: ' + e.getMessage());
-        }
-    }
-
-    // Method to delete a contact
-    @HttpDelete
-    global static void deleteContact(){
-        RestResponse response = initializeResponse();
-
-        try{
-            RestRequest request = RestContext.request;
-            String contactId = request.requestURI.substring(request.requestURI.lastIndexOf('/') + 1);
-
-            // Retrieve the contact to be deleted
-            Contact contact = [SELECT Id, Active__c FROM Contact WHERE Id =:contactId];
-            if (contact == null){
-                // If contact not found, return error response
-                sendErrorResponse(response, 'Contact not found', 404);
-                return;
-            }
-
-            // Deactivate the contact
-            contact.Active__c = false;
-            update contact;
-
-            //Send success response
-            sendSuccessResponse(response, contact.Id, 'Contact ' + contact.Id + ' was successfully deactivated');
-        } catch(Exception e){
-            // Handle any exceptions
-            handleException(response, 'An error occured: ' + e.getMessage());
-        }
-    }
-
-    //Helper methods
-
-    // Method to initialize response object
-    global static RestResponse initializeResponse(){
+    // Utility method to prepare a RestResponse object
+    private static RestResponse prepareResponse(){
         RestResponse response = RestContext.response;
         if (response == null){
-            // If response object is null, create a new one
             response = new RestResponse();
             RestContext.response = response;
         }
-        // Add content type header
         response.addHeader('Content-Type', 'application/json');
         return response;
     }
 
-    // Method to validate input parameters
-    private static void validateInput(String lastName, String firstName, String email){
-        if (String.isBlank(lastName) || String.isBlank(firstName) || String.isBlank(email)){
-            // Throw exception if any input parameter is blank
-            throw new IllegalArgumentException('Invalid input parameters');
+    /**
+     * @description Http POST request to create a contact
+     * @param lastName Last name of the contact
+     * @param firstName First name of the contact
+     * @param email Email of the contact
+     */
+    @HttpPost
+    global static void createContact(String lastName, String firstName, String email) {
+
+        RestResponse response = prepareResponse();
+
+        try {
+            // Check if a contact with the provided email already exists
+            List<Contact> contactList = [SELECT Id FROM Contact WHERE Email = :email LIMIT 1];
+
+            // If a contact with the email exists, return a message
+            if (contactList.size() > 0){
+                Contact contact = contactList[0];
+
+                Map<String, String> responseValuesMap = new Map<String, String>{
+                    'Id' => contact.Id,
+                    'Message' => 'Contact already exists, phone and email must be unique'
+                };
+
+                response.responseBody = Blob.valueOf(JSON.serialize(responseValuesMap));
+                response.statusCode = 200;
+
+            // If no contact with the email exists, create a new contact
+            }else{
+                Contact contact = new Contact (
+                    LastName = lastName,
+                    FirstName = firstName,
+                    Email = email
+                );
+                insert contact;
+
+                // Prepare response body for successful creation
+                Map<String, String> responseValuesMap = new Map<String, String>{
+                    'Id' => contact.Id,
+                    'Message' => 'Contact succesfully created'
+                };
+
+                response.responseBody = Blob.valueOf(JSON.serialize(responseValuesMap));
+                response.statusCode = 201;
+            }
+        } catch(Exception e) {
+            // Handle exceptions and return an appropriate message
+            System.debug('ERROR ON CREATE: ' + e.getMessage());
+            
+            // Prepare response body for error on creation
+            Map<String, String> responseValuesMap = new Map<String, String>{
+                'Message' => 'Contact not created, bad request'
+            };
+            response.responseBody = Blob.valueOf(JSON.serialize(responseValuesMap));
+            response.statusCode = 400;
         }
     }
 
-    // Method to send success response
-    private static void sendSuccessResponse(RestResponse response, Id contactId, String message){
-        sendSuccessResponse(response, contactId, message, 200);
+    /**
+     * @description Http PATCH request to update a contact
+     */
+    @HttpPatch
+    global static void updateContact() {
+
+        RestResponse response = prepareResponse();
+
+        try {
+            // Retrieve the Contact from the URI
+            RestRequest request = RestContext.request;
+            String contactId = request.requestURI.substring(request.requestURI.lastIndexOf('/')+1);
+            Contact contact = [SELECT Id, Email FROM Contact WHERE Id = :contactId];
+            
+            // Deserialize request body and update Contact fields
+            Map<String, Object> requestBodyMap = (Map<String, Object>)JSON.deserializeUntyped(request.requestbody.toString());
+            
+            for(String field : requestBodyMap.keySet()) {
+                contact.put(field, requestBodyMap.get(field));
+            }
+            update contact;
+
+            // Prepare response body for sucessful update
+            Map<String, String> responseValuesMap = new Map<String, String>{
+                'Id' => contact.Id,
+                'Message' => 'Contact succesfully updated'
+            };
+
+            response.responseBody = Blob.valueOf(JSON.serialize(responseValuesMap));
+            response.statusCode = 200;
+            
+        } catch(Exception e) {
+            // Handle exceptions and return an appropriate error message
+            System.debug('ERROR ON UPDATE: ' + e.getMessage());
+
+            // Prepare response body for error on update
+            Map<String, String> responseValuesMap = new Map<String, String>{
+                'Message' => 'Contact not updated, bad request'
+            };
+            response.responseBody = Blob.valueOf(JSON.serialize(responseValuesMap));
+            response.statusCode = 400;
+        }
     }
 
-    // Overloaded method to send success response with status code
-    private static void sendSuccessResponse(RestResponse response, Id contactId, String message, Integer statusCode){
-        Map<String,String> responseValuesMap = new Map<String,String>{
-            'Id' => String.valueOf(contactId),
-            'Message' => message
-        };
-        // Serialize response values and set response body and status code
-        response.responseBody = Blob.valueOf(JSON.serialize(responseValuesMap));
-        response.statusCode = statusCode;
-    }
+    /**
+     * @description Http DELETE request to deactivate a contact
+     */
+    @HttpDelete
+    global static void deleteContact(){
 
-    // Method to send error response
-    private static void sendErrorResponse(RestResponse response, String errorMessage, Integer statusCode){
-        Map<String,String> responseValuesMap = new Map<String,String>{
-            'Message' => errorMessage
-        };
-        // Serialize error message and set response body and status code
-        response.responseBody = Blob.valueOf(JSON.serialize(responseValuesMap));
-        response.statusCode = statusCode;
-    }
+        RestResponse response = prepareResponse();
 
-    // Method to handle exceptions
-    private static void handleException(RestResponse response, String errorMessage){
-        // Log error message
-        System.debug(errorMessage);
-        Map<String,String> responseValuesMap = new Map<String,String>{
-            'Message' => errorMessage
-        };
-        // Serialize error message and set response body and status code
-        response.responseBody = Blob.valueOf(JSON.serialize(responseValuesMap));
-        response.statusCode = 400;
+        try {
+            // Retrieve the Contact from the URI
+            RestRequest request = RestContext.request;
+            String contactId = request.requestURI.substring(request.requestURI.lastIndexOf('/')+1);
+
+            // Deactivate the Contact
+            Contact contact = [SELECT Id, Active__c FROM Contact WHERE Id = :contactId];
+            contact.Active__c = false;
+            update contact;
+
+            // Prepare response body for sucessful deactivation
+            Map<String, String> responseValuesMap = new Map<String, String>{
+                'Message' => 'Contact '+ contact.Id +' deactivated'
+            };
+            response.responseBody = Blob.valueOf(JSON.serialize(responseValuesMap));
+            response.statusCode = 200;
+
+        } catch(Exception e) {
+            // Handle exceptions and return an appropriate error message            
+            System.debug('ERROR ON DELETE: ' + e.getMessage());
+
+            // Prepare response body for error on deactivation
+            Map<String, String> responseValuesMap = new Map<String, String>{
+                'Message' => 'Contact not deactivated, bad request'
+            };
+            response.responseBody = Blob.valueOf(JSON.serialize(responseValuesMap));
+            response.statusCode = 400;
+        }
     }
 }

@@ -23,19 +23,18 @@ public with sharing class TestContactResource {
             Email = 'richard.roe@test.com'
         );
 
+        // Mocking the request
         RestRequest req = new RestRequest();
-        RestResponse res = new RestResponse();
         req.requestURI = REQUEST_URI;
         req.httpMethod = 'POST';
         req.requestBody = Blob.valueOf(JSON.serializePretty(testNewContact));
-
         RestContext.request = req;
+
+        // Mocking the response
+        RestResponse res = new RestResponse();
         RestContext.response = res;
 
-        // ContactResource.initializeResponse();
         Test.startTest();
-        // RestContext.request = req;
-        // RestContext.response = res;
         ContactResource.createContact(testNewContact.LastName, testNewContact.FirstName, testNewContact.Email);
         Test.stopTest();
 
@@ -56,13 +55,15 @@ public with sharing class TestContactResource {
             Email = 'john.doe@test.com'
         );
 
+        // Mocking the request
         RestRequest req = new RestRequest();
-        RestResponse res = new RestResponse();
         req.requestURI = REQUEST_URI;
         req.httpMethod = 'POST';
         req.requestBody = Blob.valueOf(JSON.serializePretty(testExistingContact));
-
         RestContext.request = req;
+
+        // Mocking the response
+        RestResponse res = new RestResponse();
         RestContext.response = res;
 
         Test.startTest();
@@ -78,13 +79,15 @@ public with sharing class TestContactResource {
     @isTest
     static void testCreateContactFailed(){
 
+        // Mocking the request with invalid data
         RestRequest req = new RestRequest();
-        RestResponse res = new RestResponse();
         req.requestURI = REQUEST_URI;
         req.httpMethod = 'POST';
         req.requestBody = Blob.valueOf(JSON.serializePretty('testFail'));
-
         RestContext.request = req;
+
+        // Mocking the response
+        RestResponse res = new RestResponse();
         RestContext.response = res;
 
         Test.startTest();
@@ -97,20 +100,21 @@ public with sharing class TestContactResource {
     @isTest
     static void testUpdateContact(){
 
-        RestRequest req = new RestRequest();
-        RestResponse res = new RestResponse();
-
         Contact testContact = [SELECT Id, LastName, FirstName, Email FROM Contact WHERE Email = 'john.doe@test.com' LIMIT 1];
 
+        // Mocking the request
+        RestRequest req = new RestRequest();
         req.requestURI = REQUEST_URI + testContact.Id;
         req.httpMethod = 'PATCH';
         req.requestBody = Blob.valueOf('{"Email": "updated.johndoe@test.com"}');
-
         RestContext.request = req;
+
+        // Mocking the response
+        RestResponse res = new RestResponse();
         RestContext.response = res;
 
         Test.startTest();
-        ContactResource.updateContact(testContact.LastName, testContact.FirstName, 'updated.johndoe@test.com');
+        ContactResource.updateContact();
         Test.stopTest();
 
         Contact updatedContact = [SELECT Id, LastName, FirstName, Email FROM Contact WHERE Email = 'updated.johndoe@test.com' LIMIT 1];
@@ -124,20 +128,21 @@ public with sharing class TestContactResource {
     @isTest
     static void testUpdateContactFailed(){
 
-        RestRequest req = new RestRequest();
-        RestResponse res = new RestResponse();
-
         Contact testContact = [SELECT Id, LastName, FirstName, Email FROM Contact WHERE Email = 'john.doe@test.com' LIMIT 1];
 
+        // Mocking the request with invalid data
+        RestRequest req = new RestRequest();
         req.requestURI = REQUEST_URI + testContact.Id;
         req.httpMethod = 'PATCH';
         req.requestBody = Blob.valueOf('{"Email": "invalidEmail"}');
-
         RestContext.request = req;
+
+        // Mocking the response
+        RestResponse res = new RestResponse();
         RestContext.response = res;
 
         Test.startTest();
-        ContactResource.updateContact(testContact.LastName, testContact.FirstName, 'invalidEmail');
+        ContactResource.updateContact();
         Test.stopTest();
 
         Assert.areEqual(400, res.statusCode);
@@ -148,14 +153,15 @@ public with sharing class TestContactResource {
 
         Contact testContact = [SELECT Id, LastName, FirstName, Email FROM Contact WHERE Email = 'john.doe@test.com' LIMIT 1];
 
+        // Mocking the request
         RestRequest req = new RestRequest();
-        RestResponse res = new RestResponse();
-
         req.requestURI = REQUEST_URI + testContact.Id;
-        req.requestBody = Blob.valueOf('');
         req.httpMethod = 'DELETE';
-
+        req.requestBody = Blob.valueOf('');
         RestContext.request = req;
+
+        // Mocking the response
+        RestResponse res = new RestResponse();
         RestContext.response = res;
 
         Test.startTest();
@@ -171,14 +177,15 @@ public with sharing class TestContactResource {
     @isTest
     static void testDeleteContactFailed(){
 
+        // Mocking the request
         RestRequest req = new RestRequest();
-        RestResponse res = new RestResponse();
-
         req.requestURI = REQUEST_URI + 'invalidId';
-        req.requestBody = Blob.valueOf('');
         req.httpMethod = 'DELETE';
-
+        req.requestBody = Blob.valueOf('');
         RestContext.request = req;
+
+        // Mocking the response
+        RestResponse res = new RestResponse();
         RestContext.response = res;
 
         Test.startTest();
@@ -186,6 +193,24 @@ public with sharing class TestContactResource {
         Test.stopTest();
 
         Assert.areEqual(400, res.statusCode);
+    }
+
+    @isTest
+    static void testDeleteContactNullResponse(){
+
+        // Mocking the request
+        RestRequest req = new RestRequest();
+        req.requestURI = REQUEST_URI + 'invalidId';
+        req.httpMethod = 'DELETE';
+        req.requestBody = Blob.valueOf('');
+        RestContext.request = req;
+
+        // Mocking the response as null
+        RestContext.response = null;
+
+        Test.startTest();
+        ContactResource.deleteContact();
+        Test.stopTest();
     }
 
 }

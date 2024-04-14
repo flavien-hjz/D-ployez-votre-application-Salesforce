@@ -33,7 +33,7 @@ global with sharing class ContactResource {
 
                 Map<String, String> responseValuesMap = new Map<String, String>{
                     'Id' => contact.Id,
-                    'Message' => 'Contact already exists, phone and email must be unique'
+                    'Message' => 'Contact already exists, email must be unique'
                 };
 
                 response.responseBody = Blob.valueOf(JSON.serialize(responseValuesMap));
@@ -134,7 +134,7 @@ global with sharing class ContactResource {
 
             // Prepare response body for sucessful deactivation
             Map<String, String> responseValuesMap = new Map<String, String>{
-                'Message' => 'Contact '+ contact.Id +' deactivated'
+                'Message' => 'Contact '+ contact.Id +' successfully deactivated'
             };
             response.responseBody = Blob.valueOf(JSON.serialize(responseValuesMap));
             response.statusCode = 200;

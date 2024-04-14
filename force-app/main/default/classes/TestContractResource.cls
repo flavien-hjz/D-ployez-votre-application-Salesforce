@@ -1,7 +1,7 @@
 @isTest
 public with sharing class TestContractResource {
 
-    static final string REQUEST_URI = '/services/apexrest/v1/Contacts/';
+    static final string REQUEST_URI = '/services/apexrest/v1/Contracts/';
 
     @TestSetup
     static void makeData(){
